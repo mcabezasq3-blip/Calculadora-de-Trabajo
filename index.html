@@ -1,1 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Trabajo Mecánico</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            background-color: #f4f4f9; 
+            padding: 20px; 
+        }
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            width: 100%; 
+            max-width: 500px; 
+            text-align: center; 
+        }
+        input, select { 
+            width: 90%; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            font-size: 16px;
+        }
+        button { 
+            background-color: #28a745; 
+            color: white; 
+            border: none; 
+            padding: 12px 20px; 
+            cursor: pointer; 
+            border-radius: 4px; 
+            font-size: 16px; 
+            margin-top: 10px;
+            width: 95%;
+        }
+        button:hover { 
+            background-color: #218838; 
+        }
+        #resultado { 
+            margin-top: 20px; 
+            font-weight: bold; 
+            font-size: 20px; 
+            color: #007bff; 
+        }
+        #equivalencia { 
+            margin-top: 10px; 
+            font-weight: bold; 
+            font-size: 16px; 
+            color: #555; 
+        }
+        #mensajePromedio {
+            margin-top: 10px; 
+            font-weight: bold; 
+            font-size: 16px;
+        }
+        canvas { 
+            margin-top: 30px; 
+            width: 100% !important; 
+            max-width: 400px; 
+            height: auto !important; 
+        }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <h2>Calculadora de Energía</h2>
+    
+    <select id="genero">
+        <option value="" disabled selected>Seleccione género</option>
+        <option value="m">Masculino</option>
+        <option value="f">Femenino</option>
+        <option value="o">Otro</option>
+    </select>
+    
+    <input type="number" id="edad" placeholder="Edad (años)" required>
+    <input type="number" id="masa" placeholder="Masa corporal (kg)" required>
+    <input type="number" id="distancia" placeholder="Distancia de desplazamiento (cm)" step="1" required>
+    <input type="number" id="repeticiones" placeholder="Número de repeticiones" required>
+    
+    <button onclick="calcularTrabajo()">Calcular Joules</button>
+
+    <p id="resultado"></p>
+    <p id="equivalencia"></p>
+    <p id="mensajePromedio"></p>
+    <canvas id="graficoJoules"></canvas>
+</div>
+
+<script>
+    let chartInstance = null;
+
+    const equivalencias = [
+        { costo: 333, texto: "subir [N] pisos por las escaleras" },
+        { costo: 196, texto: "levantar [N] cajas de 10 kg del suelo a una mesa" },
+        { costo: 147, texto: "levantar a un niño de 15 kg [N] veces" },
+        { costo: 196, texto: "subir [N] botellones de agua de 20 litros a su dispensador" },
+        { costo: 98, texto: "levantar [N] llantas de auto de 10 kg" },
+        { costo: 39, texto: "levantar [N] sillas de madera a un metro de altura" },
+        { costo: 196, texto: "lanzar [N] sacos de arena de 20 kg a un metro de altura" },
+        { costo: 147, texto: "levantar [N] bloques de cemento de 15 kg" },
+        { costo: 294, texto: "cargar [N] tanques de gas llenos (30 kg) a un metro de altura" },
+        { costo: 180, texto: "levantar [N] maletas de viaje de 23 kg a la cajuela de un auto" },
+        { costo: 245, texto: "cargar [N] bultos de alimento para perro de 25 kg a una mesa" },
+        { costo: 147, texto: "levantar [N] televisores de 55 pulgadas (15 kg) a un mueble" },
+        { costo: 49, texto: "levantar [N] sacos de naranjas de 5 kg a un metro de altura" },
+        { costo: 98, texto: "sacar [N] bolsas de basura pesadas (10 kg) del contenedor" },
+        { costo: 343, texto: "levantar [N] quintales de arroz (35 kg) del suelo" },
+        { costo: 78, texto: "alzar [N] veces una bicicleta estándar (8 kg) por encima del suelo" },
+        { costo: 25, texto: "levantar [N] laptops (2.5 kg) a un metro de altura" },
+        { costo: 117, texto: "levantar [N] baterías de auto (12 kg) a la cajuela" },
+        { costo: 490, texto: "levantar [N] sacos de cemento de 50 kg a un metro" },
+        { costo: 156, texto: "alzar [N] macetas de jardín grandes (16 kg) a una plataforma" }
+    ];
+
+    const mensajesAnimo = [
+        "¡No te rindas, cada repetición cuenta!",
+        "El progreso toma tiempo, sigue esforzándote.",
+        "Hoy es un paso más hacia tu mejor versión.",
+        "Descansa, recupérate y vuelve más fuerte la próxima vez.",
+        "La constancia es la clave del éxito, ¡tú puedes!",
+        "No importa la velocidad, sino no detenerse.",
+        "Cada gota de sudor te acerca a tu meta.",
+        "El único mal entrenamiento es el que no se hace. ¡Sigue así!",
+        "Transformar tu cuerpo y energía es un viaje, disfruta el proceso.",
+        "Estás construyendo disciplina, ¡no bajes los brazos!"
+    ];
+
+    function calcularPromedioHumano(genero, edad) {
+        let pesoPromedio, repsPromedio, distanciaPromedio;
+        
+        if (genero === 'm') {
+            pesoPromedio = 60;
+            repsPromedio = 15;
+            distanciaPromedio = 0.20;
+        } else if (genero === 'f') {
+            pesoPromedio = 50;
+            repsPromedio = 8;
+            distanciaPromedio = 0.20;
+        } else {
+            pesoPromedio = 55;
+            repsPromedio = 11.5;
+            distanciaPromedio = 0.20;
+        }
+        
+        let factorEdad = 1;
+        if (edad < 15) factorEdad = 0.6;
+        else if (edad >= 15 && edad < 25) factorEdad = 1.0;
+        else if (edad >= 25 && edad < 35) factorEdad = 0.9;
+        else if (edad >= 35 && edad < 45) factorEdad = 0.75;
+        else if (edad >= 45 && edad < 55) factorEdad = 0.6;
+        else factorEdad = 0.4;
+        
+        repsPromedio = repsPromedio * factorEdad;
+        
+        const gravedad = 9.81;
+        const porcentajeMasa = 0.70;
+        
+        return (pesoPromedio * porcentajeMasa * gravedad) * distanciaPromedio * repsPromedio;
+    }
+
+    function calcularTrabajo() {
+        const genero = document.getElementById("genero").value;
+        const edad = parseInt(document.getElementById("edad").value);
+        const masa = parseFloat(document.getElementById("masa").value);
+        const distanciaCm = parseFloat(document.getElementById("distancia").value);
+        const repeticiones = parseInt(document.getElementById("repeticiones").value);
+
+        if (!genero || isNaN(edad) || isNaN(masa) || isNaN(distanciaCm) || isNaN(repeticiones) || edad <= 0 || masa <= 0 || distanciaCm <= 0 || repeticiones <= 0) {
+            alert("Por favor, complete todos los campos con valores numéricos válidos mayores a cero.");
+            return;
+        }
+
+        const distanciaM = distanciaCm / 100;
+        const gravedad = 9.81;
+        const porcentajeMasa = 0.70;
+        const masaEfectiva = masa * porcentajeMasa;
+
+        const trabajoPorRepeticion = (masaEfectiva * gravedad) * distanciaM;
+        const trabajoTotal = trabajoPorRepeticion * repeticiones;
+        const promedioHumano = calcularPromedioHumano(genero, edad);
+
+        document.getElementById("resultado").innerText = trabajoTotal.toFixed(2) + " Joules";
+
+        const equivalenciaAleatoria = equivalencias[Math.floor(Math.random() * equivalencias.length)];
+        const cantidad = Math.max(1, Math.round(trabajoTotal / equivalenciaAleatoria.costo));
+        const textoModificado = equivalenciaAleatoria.texto.replace('[N]', cantidad);
+
+        document.getElementById("equivalencia").innerText = "Hoy has movido " + trabajoTotal.toFixed(0) + " Joules, equivalente a " + textoModificado + ".";
+
+        const pMensaje = document.getElementById("mensajePromedio");
+        if (trabajoTotal >= promedioHumano) {
+            pMensaje.style.color = "#28a745";
+            pMensaje.innerText = "¡Excelente! Has superado el promedio para tu perfil. ¡Sigue rompiendo tus propios límites y mantén ese gran nivel!";
+        } else {
+            const joulesFaltantes = promedioHumano - trabajoTotal;
+            const repsFaltantes = Math.ceil(joulesFaltantes / trabajoPorRepeticion);
+            const mensajeAleatorio = mensajesAnimo[Math.floor(Math.random() * mensajesAnimo.length)];
+            
+            pMensaje.style.color = "#dc3545";
+            pMensaje.innerText = "Aún no alcanzas el promedio. Te faltaron aproximadamente " + repsFaltantes + " repeticiones para llegar a la meta. " + mensajeAleatorio;
+        }
+
+        actualizarGrafico(trabajoTotal, promedioHumano);
+    }
+
+    function actualizarGrafico(joulesUsuario, promedioHumano) {
+        const ctx = document.getElementById("graficoJoules").getContext("2d");
+
+        if (chartInstance) {
+            chartInstance.destroy();
+        }
+
+        chartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Tu Rendimiento', 'Promedio Humano'],
+                datasets: [{
+                    label: 'Energía Generada (Joules)',
+                    data: [joulesUsuario, promedioHumano],
+                    backgroundColor: ['#28a745', '#6c757d'],
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Joules (J)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>
